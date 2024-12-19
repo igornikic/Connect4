@@ -1,0 +1,10 @@
+bin/
+obj/
+
+*.log
+.vscode/
+appsettings.Development.json
+
+wwwroot/lib/
+node_modules/
+.env
