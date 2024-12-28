@@ -1,0 +1,20 @@
+### Register
+POST http://localhost:5175/api/user/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "12345678"
+}
+
+### Login
+POST http://localhost:5175/api/user/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "12345678"
+}
+
+### Get User by Username
+GET http://localhost:5175/api/user/testuser
