@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect4 - Game</title>
+  <link rel="stylesheet" href="../Styles/game.css">
+  <script src="../config.js"></script>
+</head>
+<body>
+  <div class="players">
+    <p id="player1"></p>
+    <p id="player2"></p>
+  </div>
+  <div id="board"></div>
+
+  <!-- Game End popup -->
+  <div id="gameResultPopup" class="popup hidden">
+    <div class="popup-content">
+      <h2 id="popupTitle"></h2>
+      <p id="popupMessage"></p>
+      <div id="account_updates"></div>
+      <button id="closePopupButton">Close</button>
+    </div>
+  </div>
+
+  <script src="../Scripts/game.js"></script>
+</body>
+</html>

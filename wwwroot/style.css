@@ -1,0 +1,113 @@
+* {
+  box-sizing: border-box
+}
+
+body {
+  background: #141E30; 
+  background: -webkit-linear-gradient(to right, #243B55, #141E30);  
+  background: linear-gradient(to right, #243B55, #141E30);
+}
+
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+main {
+  width: 100%;
+  max-width: 400px; /* Form width limit */
+  background: #ffffff; /* White background for the form area */
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 2rem;
+  color: #343a40;
+}
+
+form div {
+  text-align: left; /* Align labels to left */
+}
+
+form label {
+  font-weight: bold;
+  color: #495057;
+}
+
+form input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 16px;
+  font-size: 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  outline: none;
+}
+
+form input:focus {
+  border-color: #80bdff; /* Blue border on focus */
+  box-shadow: 0 0 4px rgba(0, 123, 255, 0.25); /* Focus shadow */
+}
+
+form button {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff; /* Primary blue color */
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+form button:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
+form p {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+form a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+form a:hover {
+  text-decoration: underline;
+}
+
+.check {
+  width: 50px;
+  height: 16px;
+  opacity: 0;
+  position: absolute;
+}
+
+#password_field {
+  position: relative;
+}
+
+#toggle_password {
+  position: absolute;
+  left: 83%;
+  top: 20%;
+}
+
+@media only screen and (width < 400px) {
+  #toggle_password {
+    left: 80%;
+  }
+}

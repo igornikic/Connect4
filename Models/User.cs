@@ -14,7 +14,9 @@ namespace Connect4.Models
     public string AvatarPath { get; set; } = "Assets/Avatars/avatar1.png";
 
     public uint Balance { get; set; } = 0;
+    public uint SkillScore { get; set; } = 0;
     public uint TotalGamesPlayed { get; set; } = 0;
     public uint TotalWins { get; set; } = 0;
+    public uint TotalDraws { get; set; } = 0;
   }
 }

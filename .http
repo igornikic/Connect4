@@ -7,6 +7,24 @@ Content-Type: application/json
   "password": "12345678"
 }
 
+### Register
+POST http://localhost:5175/api/user/register
+Content-Type: application/json
+
+{
+  "username": "testuser2",
+  "password": "12345678"
+}
+
+### Register
+POST http://localhost:5175/api/user/register
+Content-Type: application/json
+
+{
+  "username": "testuser3",
+  "password": "12345678"
+}
+
 ### Login
 POST http://localhost:5175/api/user/login
 Content-Type: application/json
@@ -16,5 +34,30 @@ Content-Type: application/json
   "password": "12345678"
 }
 
+### Login
+POST http://localhost:5175/api/user/login
+Content-Type: application/json
+
+{
+  "username": "testuser2",
+  "password": "12345678"
+}
+
 ### Get User by Username
 GET http://localhost:5175/api/user/testuser
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlcjIiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoidGVzdHVzZXIyIiwianRpIjoiYzI2MzQyYzQtNGE5Zi00ZTgzLTk5MjctMGQ1MDA3ZjJjMDdiIiwiZXhwIjoxNzM1OTUwNDAyLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjUxNzUifQ.Ecpa4ld4B14LbnfhGdt9f_32ttXhSq-4S7GFb7WkMPs
+
+### Join Queue
+POST http://localhost:5175/api/game/queue/testuser
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImp0aSI6IjVhMDg2ZWVhLWNlNmMtNDA4Yy1hNWU5LTI1ODU1ODhlNmM0YSIsImV4cCI6MTczNTUyMjAzMSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo1MTc1IiwiYXVkIjoiaHR0cDovL2xvY2FsaG9zdDo1MTc1LyJ9.EG0ECTmExfhWDm98b5zIWhXYntRxH7BGsY5nPfKwbjE
+
+### Join Queue
+POST http://localhost:5175/api/game/queue/testuser2
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImp0aSI6IjUwODIxZjc1LTRjNTEtNDJiMS1hOTAzLWFjMGY0YjkxYjUzYiIsImV4cCI6MTczNTU2NDk4NiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo1MTc1IiwiYXVkIjoiaHR0cDovL2xvY2FsaG9zdDo1MTc1LyJ9.FEP3aqVn8yUFmtwrr1qHLM6-bq5bPOm6nQwc3dy6nnk
+
+### Join Queue
+POST http://localhost:5175/api/game/queue/testuser
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlcjIiLCJqdGkiOiIyNjY4YTgwNy1jZDU0LTRmNDEtYWU2My0wNDMwZDMyNDUwNjkiLCJleHAiOjE3MzU3NTk2NTUsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTE3NSIsImF1ZCI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTE3NS8ifQ.r-uD2Vy9XKUApeLBYsI_Udz6AyvilvlUQ_AG086hoUU
+
+### Get avatar
+GET http://localhost:5175/api/user/Assets/Avatars/avatar1.png

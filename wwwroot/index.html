@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect4</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./Styles/resMessage.css">
+  <script src="./config.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Connect4</h1>
+    <div class="form-container">
+      <form method="POST" id="loginForm">
+        <!-- Username -->
+        <div>
+          <label for="username">Username:</label>
+        </div>
+        <input 
+          type="text" 
+          name="username" 
+          id="username" 
+          placeholder="Enter your username" 
+          autocomplete="username" 
+          required 
+          aria-required="true"
+        >
+
+        <!-- Password -->
+        <div>
+          <label for="password">Password:</label>
+        </div>
+        <div id="password_field">
+
+          <input 
+          type="password" 
+          name="password" 
+          id="password" 
+          placeholder="Enter your password" 
+          required 
+          aria-required="true"
+          >
+          <div id="toggle_password">
+            <input id="check1" class="check" type="checkbox">
+            <label for="check1" id="toggle">SHOW</label>
+          </div>
+        </div>
+
+        <!-- Login button -->
+        <button type="submit">Login</button>
+        
+        <!-- Link to register -->
+        <p>
+          Don't have an account? 
+          <a href="/register">Register here</a>.
+        </p>
+      </form>
+    </div>
+  </main>
+
+  <div id="responseMessage" class="response"></div>
+  <script src="./index.js"></script>
+</body>
+</html>

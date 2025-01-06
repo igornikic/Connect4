@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connect4 - Menu</title>
+    <link rel="stylesheet" href="../Styles/menu.css" />
+    <link rel="stylesheet" href="../Styles/resMessage.css">
+    <script src="../config.js"></script>
+  </head>
+  <body>
+    <nav>
+      <div id="nav_links">
+        <div>
+          <a href="/profile">
+            <img id="avatar" width="64" />
+          </a>
+        </div>
+        <div>
+          <p id="username"></p>
+        </div>
+        <div>
+          <a href="/shop"><p>SHOP</p></a>
+        </div>
+        <div>
+          <a href="/leaderboard"><p>LEADERBOARD</p></a>
+        </div>
+      </div>
+      <div id="balance">
+        <p id="coins"></p>
+        <div>
+          <!-- Freepik, Icon by Yoteyo -->
+          <img src="../Assets/Icons/coins.png" width="48px" alt="coins" />
+        </div>
+      </div>
+    </nav>
+    <main>
+      <p id="queue_message"></p>
+      <button type="button" id="find_match">Find Match</button>
+    </main>
+    <div id="responseMessage"></div>
+
+    <script src="../Scripts/menu.js"></script>
+  </body>
+</html>

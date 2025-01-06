@@ -1,9 +1,9 @@
 using Connect4.Models;
 using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using BC = BCrypt.Net.BCrypt;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Connect4.Controllers
 {
@@ -15,7 +15,7 @@ namespace Connect4.Controllers
 
     public UserController(IConnectionMultiplexer redis)
     {
-        db = redis.GetDatabase();
+      db = redis.GetDatabase();
     }
 
     [HttpPost("register")]
@@ -41,8 +41,10 @@ namespace Connect4.Controllers
       user.Password = BC.HashPassword(user.Password);
       user.AvatarPath = "Assets/Avatars/avatar1.png";
       user.Balance = 0;
+      user.SkillScore = 0;
       user.TotalGamesPlayed = 0;
       user.TotalWins = 0;
+      user.TotalDraws = 0;
 
       try
       {
@@ -54,6 +56,7 @@ namespace Connect4.Controllers
           new HashEntry("Password", user.Password),
           new HashEntry("AvatarPath", user.AvatarPath),
           new HashEntry("Balance", user.Balance),
+          new HashEntry("SkillScore", user.SkillScore),
           new HashEntry("TotalGamesPlayed", user.TotalGamesPlayed),
           new HashEntry("TotalWins", user.TotalWins)
         });
@@ -62,13 +65,22 @@ namespace Connect4.Controllers
       }
       catch (SecurityTokenException ex)
       {
-          return StatusCode(500, $"Token generation error: {ex.Message}");
+        return StatusCode(500, $"Token generation error: {ex.Message}");
       }
       catch (Exception ex)
       {
         return StatusCode(500, $"Internal server error: {ex.Message}");
       }
     }
+
+    [HttpGet]
+    [Route("register")]
+    public IActionResult GetRegisterPage()
+    {
+      Console.WriteLine("called");
+      return File("~/register.html", "text/html");
+    }
+
 
     [HttpPost("login")]
     [ProducesResponseType(200)]
@@ -101,7 +113,7 @@ namespace Connect4.Controllers
       }
       catch (SecurityTokenException ex)
       {
-          return StatusCode(500, $"Token generation error: {ex.Message}");
+        return StatusCode(500, $"Token generation error: {ex.Message}");
       }
       catch (Exception ex)
       {
@@ -110,6 +122,7 @@ namespace Connect4.Controllers
     }
 
     [HttpGet("{username}")]
+    [Authorize]
     [ProducesResponseType(200)]
     [ProducesResponseType(404)]
     public async Task<ActionResult<User>> GetUser(string username)
@@ -117,10 +130,16 @@ namespace Connect4.Controllers
       var userHash = await db.HashGetAllAsync($"user:{username}");
       if (userHash.Length == 0)
       {
-          return NotFound($"User '{username}' not found.");
+        return NotFound($"User '{username}' not found.");
       }
 
-      var user = string.Join("\n", userHash.Select(u => $"{u.Name}: {u.Value}"));
+      // User data without password
+      var user = userHash
+        .Where(u => u.Name != "Password")
+        .ToDictionary(
+            entry => entry.Name.ToString(),
+            entry => entry.Value.ToString()
+        );
 
       return Ok(user);
     }
@@ -130,6 +149,7 @@ namespace Connect4.Controllers
       var claims = new[]
       {
           new Claim(JwtRegisteredClaimNames.Sub, username),
+          new Claim(ClaimTypes.Name, username),
           new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
       };
 
@@ -137,16 +157,50 @@ namespace Connect4.Controllers
 
       var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey));
       var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
+      var appUrl = DotNetEnv.Env.GetString("APP_URL");
+      Console.WriteLine(appUrl);
       var token = new JwtSecurityToken(
-          issuer: "http://localhost:5175",
-          audience: "http://localhost:5175",
+          issuer: appUrl,
+          audience: appUrl,
           claims: claims,
           expires: DateTime.Now.AddMinutes(30),
           signingCredentials: creds
       );
 
       return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    [HttpGet("Assets/Avatars/{avatarName}")]
+    public IActionResult GetAvatar(string avatarName)
+    {
+      // Get root project directory path
+      var rootDirectory = Directory.GetCurrentDirectory();
+
+      // Construct file path for avatar image
+      var filePath = Path.Combine(rootDirectory, "Assets", "Avatars", avatarName);
+
+      // Check if file exists
+      if (!System.IO.File.Exists(filePath))
+      {
+        return NotFound();
+      }
+
+      // Read file bytes
+      var fileBytes = System.IO.File.ReadAllBytes(filePath);
+
+      // Get file extension and determine the MIME type
+      var fileExtension = Path.GetExtension(avatarName).ToLower();
+      var mimeType = fileExtension switch
+      {
+        ".png" => "image/png",
+        ".jpg" => "image/jpeg",
+        ".jpeg" => "image/jpeg",
+        ".gif" => "image/gif",
+        _ => "application/octet-stream"
+      };
+
+      // Return file with it's MIME type
+      return File(fileBytes, mimeType);
     }
   }
 }

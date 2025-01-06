@@ -1,0 +1,35 @@
+.response {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.response.show {
+  opacity: 1;
+}
+
+.response.success {
+  background-color: #4caf50;
+}
+
+.response.error {
+  background-color: #f44336;
+}
+
+.response.warning {
+  background-color: #ff9800;
+}
+
+.response.info {
+  background-color: #2196f3;
+}
