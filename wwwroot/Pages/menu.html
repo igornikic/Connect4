@@ -11,13 +11,15 @@
   <body>
     <nav>
       <div id="nav_links">
-        <div>
-          <a href="/profile">
+        <div class="dropdown">
+          <a href="#" class="dropdown-header">
             <img id="avatar" width="64" />
+            <span id="username">Username</span>
           </a>
-        </div>
-        <div>
-          <p id="username"></p>
+          <div class="dropdown-content">
+            <a href="/profile">Profile</a>
+            <button id="logout-btn">Logout</button>
+          </div>
         </div>
         <div>
           <a href="/shop"><p>SHOP</p></a>
@@ -40,6 +42,6 @@
     </main>
     <div id="responseMessage"></div>
 
-    <script src="../Scripts/menu.js"></script>
+    <script type="module" src="../Scripts/menu.js"></script>
   </body>
 </html>

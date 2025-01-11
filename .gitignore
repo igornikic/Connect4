@@ -6,5 +6,6 @@ obj/
 appsettings.Development.json
 
 wwwroot/lib/
+wwwroot/config.js
 node_modules/
 .env

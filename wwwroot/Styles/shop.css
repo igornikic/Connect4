@@ -1,0 +1,89 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: #141E30; 
+  background: -webkit-linear-gradient(to right, #243B55, #141E30);  
+  background: linear-gradient(to right, #243B55, #141E30);
+}
+
+#menu_balance {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+#menu_balance a {
+  color: #fff;
+  font-size: 24px;
+}
+
+#balance  {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+}
+
+#balance p {
+  font-size: 24px;
+  color: #fff;
+  margin: 0 10px 0 0;
+}
+
+#shop {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.shop-item {
+  background-color: #f0f0f5;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.shop-item div {
+  width: 128px;
+  height: 128px;
+}
+
+.shop-item img {
+  /* border: 3px solid #6666ff; */
+  border-radius: 50%;
+}
+
+.shop-item p {
+  margin: 5px;
+}
+
+.shop-item button {
+  width: 100%;
+  padding: 10px 20px;
+  background-color: #007bff; /* Primary blue color */
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.shop-item button:hover {
+  background-color: #0056b3;
+}
+
+.shop-item button:disabled {
+  background-color: #92a1b1;
+  cursor: default;
+}
+
+.loading {
+  /* Gif from loading.io */
+  background: url("../Assets/Gifs/loading.gif") center center no-repeat;
+}

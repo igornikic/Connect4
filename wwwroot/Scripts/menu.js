@@ -1,6 +1,7 @@
+import showResponseMessage from "./resMessage.js";
+
 const token = localStorage.getItem("token");
 const findMatch = document.getElementById("find_match");
-const responseMessage = document.getElementById("responseMessage");
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Ensure token exists
@@ -43,12 +44,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       }, 2000);
     } else if (response.status === 404) {
       showResponseMessage("User not found.", "error");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
     } else {
       const error = await response.text();
       showResponseMessage(`Error: ${error}`, "error");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
     }
   } catch (error) {
     showResponseMessage(`Error: ${error.message}`, "error");
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 2000);
   }
 
   // Trigger matchmaking request
@@ -121,14 +131,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       showResponseMessage(`Error: ${error.message}`, "error");
     }
   });
+
+  document.getElementById("logout-btn").addEventListener("click", (e) => {
+    e.preventDefault();
+
+    localStorage.clear();
+
+    showResponseMessage("See you soon!", "success");
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 2000);
+  });
 });
-
-// Function to show the message and hide it after 3 seconds
-function showResponseMessage(message, type) {
-  responseMessage.textContent = message;
-  responseMessage.className = `response show ${type}`;
-
-  setTimeout(() => {
-    responseMessage.classList.remove("show");
-  }, 3000);
-}

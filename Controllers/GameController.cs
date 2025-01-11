@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
 using Connect4.Models;
+using Connect4.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
@@ -103,7 +104,7 @@ namespace Connect4.Controllers
         {
           var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
 
-          // Store active WebSocket connection with associated username
+          // Store active WebSocket connection
           activeConnectionsToPlayers[webSocket] = username;
           Console.WriteLine($"WebSocket connection established for game {gameID} by player {username}.");
 
@@ -115,6 +116,10 @@ namespace Connect4.Controllers
               WebSocketMessageType.Text,
               true,
               CancellationToken.None);
+
+          // Start monitoring the next player's turn
+          var initialTurn = db.HashGet(gameKey, "currentTurn").ToString();
+          _ = MonitorPlayerTurns(gameID, initialTurn); // Fire and forget
 
           // Subscribe to game updates
           await sub.SubscribeAsync(RedisChannel.Literal(gameKey), async (channel, message) =>
@@ -166,13 +171,8 @@ namespace Connect4.Controllers
 
             if (result.MessageType == WebSocketMessageType.Close)
             {
-              if (webSocket.State == WebSocketState.Open)
-              {
-                Console.WriteLine($"WebSocket connection closed for game {gameID} by player {username}.");
-                activeConnectionsToPlayers.TryRemove(webSocket, out _);
-                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
-                return new EmptyResult();
-              }
+              Console.WriteLine($"Player {username} disconnected.");
+              return new EmptyResult();
             }
 
             if (result.MessageType == WebSocketMessageType.Text)
@@ -180,13 +180,17 @@ namespace Connect4.Controllers
               var index = int.Parse(Encoding.UTF8.GetString(buffer, 0, result.Count));
               Console.WriteLine($"Player {username} made a move at index {index}.");
 
-              // Update the game board
+              // Update game board
               var gameUpdate = ProcessPlayerMove(gameID, username, index);
 
               // Publish update to all clients
               if (gameUpdate != null)
               {
                 await db.PublishAsync(RedisChannel.Literal(gameKey), gameUpdate);
+
+                // Start monitoring the next player's turn
+                var nextTurn = db.HashGet(gameKey, "currentTurn").ToString();
+                _ = MonitorPlayerTurns(gameID, nextTurn); // Fire and forget
               }
             }
           }
@@ -319,14 +323,12 @@ namespace Connect4.Controllers
             if (count >= 4) return true; // Win condition met
           }
         }
-
-        //if (count >= 4) return true; // Win condition met
       }
 
       return false;
     }
 
-    private void HandleGameEnd(uint gameID, string winner, bool isWinner, bool isDraw)
+    private void HandleGameEnd(uint gameID, string winner, bool isWinner, bool isDraw, string? wonOnTime = null)
     {
       var player1 = db.HashGet($"game:{gameID}:game{gameID}", "player1").ToString();
       var player2 = db.HashGet($"game:{gameID}:game{gameID}", "player2").ToString();
@@ -334,8 +336,8 @@ namespace Connect4.Controllers
       UpdatePlayerStats(player1, isWinner && winner == player1, isDraw, winner != player1);
       UpdatePlayerStats(player2, isWinner && winner == player2, isDraw, winner != player2);
 
-      NotifyPlayers(player1);
-      NotifyPlayers(player2);
+      NotifyPlayers(player1, wonOnTime);
+      NotifyPlayers(player2, wonOnTime);
     }
 
     private void UpdatePlayerStats(string username, bool isWin, bool isDraw, bool isLoss)
@@ -350,15 +352,23 @@ namespace Connect4.Controllers
 
       if (isWin)
       {
+        int increase = new Random().Next(10, 16);
         db.HashIncrement(userKey, "TotalWins", 1);
-        db.HashIncrement(userKey, "SkillScore", new Random().Next(10, 16));
+        double newSkillScore = db.HashIncrement(userKey, "SkillScore", increase);
         db.HashIncrement(userKey, "Balance", 10);
+
+        // Update leaderboard
+        UpdateLeaderboard(username, newSkillScore);
       }
       else if (isLoss)
       {
         int decrease = new Random().Next(10, 16);
-        long currentSkillScore = (long)db.HashGet(userKey, "SkillScore"); // Get current score
-        db.HashSet(userKey, "SkillScore", Math.Max(0, currentSkillScore - decrease)); // Avoid negatives
+        double currentSkillScore = (double)db.HashGet(userKey, "SkillScore"); // Get current score
+        double newSkillScore = Math.Max(0, currentSkillScore - decrease);
+        db.HashSet(userKey, "SkillScore", newSkillScore); // Avoid negatives
+
+        // Update leaderboard
+        UpdateLeaderboard(username, newSkillScore);
       }
       else if (isDraw)
       {
@@ -369,13 +379,18 @@ namespace Connect4.Controllers
 
 
     // Notify to players end game results
-    private async void NotifyPlayers(string username)
+    private async void NotifyPlayers(string username, string? wonOnTime)
     {
       if (activeConnectionsToPlayers.Values.Contains(username))
       {
         var userKey = $"user:{username}";
         var updatedUser = db.HashGetAll(userKey).Where(u => u.Name != "Password")
                             .ToDictionary(x => x.Name.ToString(), x => x.Value.ToString());
+
+        if (!string.IsNullOrEmpty(wonOnTime))
+        {
+          updatedUser["WonOnTime"] = wonOnTime;
+        }
         var userUpdateMessage = JsonSerializer.Serialize(updatedUser);
 
         foreach (var connection in activeConnectionsToPlayers.Where(c => c.Value == username))
@@ -383,11 +398,30 @@ namespace Connect4.Controllers
           var webSocket = connection.Key;
           if (webSocket.State == WebSocketState.Open)
           {
-            await webSocket.SendAsync(
-                new ArraySegment<byte>(Encoding.UTF8.GetBytes(userUpdateMessage)),
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None);
+            try
+            {
+              await webSocket.SendAsync(
+                  new ArraySegment<byte>(Encoding.UTF8.GetBytes(userUpdateMessage)),
+                  WebSocketMessageType.Text,
+                  true,
+                  CancellationToken.None);
+
+              // Delay a little bit to make sure userUpdateMessage is sent
+              await Task.Delay(1000);
+              await webSocket.CloseAsync(
+                  WebSocketCloseStatus.NormalClosure,
+                  "Game over",
+                  CancellationToken.None
+              );
+
+              Console.WriteLine($"{username} disconnected by NotifyPlayer");
+
+              activeConnectionsToPlayers.TryRemove(webSocket, out _);
+            }
+            catch (Exception ex)
+            {
+              Console.WriteLine($"Error notifying player {username}: {ex.Message}");
+            }
           }
         }
       }
@@ -481,7 +515,6 @@ namespace Connect4.Controllers
     {
       var gameKey = $"game:{gameID}:game{gameID}";
 
-      // Retrieve game data from Redis (as a hash set)
       var gameData = await db.HashGetAllAsync(gameKey);
 
       if (gameData.Length == 0)
@@ -492,7 +525,7 @@ namespace Connect4.Controllers
       // Convert HashEntry array into dictionary
       var gameDataDict = gameData.ToDictionary(
           x => x.Name.ToString(),
-          x => GetValueWithType(x.Value)
+          x => Helpers.GetValueWithType(x.Value)
       );
 
       // Serialize dictionary into JSON
@@ -514,39 +547,74 @@ namespace Connect4.Controllers
       // Convert HashEntry array into dictionary
       var gameDataDict = gameData.ToDictionary(
           x => x.Name.ToString(),   // Key as string
-          x => GetValueWithType(x.Value) // Method to get the value with correct type
+          x => Helpers.GetValueWithType(x.Value) // Method to get the value with correct type
       );
 
       return gameDataDict;
     }
 
-    // Helper method to get the actual value with its type
-    private object? GetValueWithType(RedisValue redisValue)
+    public void UpdateLeaderboard(string username, double skillScore)
     {
-      if (redisValue.IsNullOrEmpty)
+      const string leaderboardKey = "leaderboard";
+
+      // Update user's score in sorted set
+      db.SortedSetAdd(leaderboardKey, username, skillScore);
+    }
+
+
+    // Get top 10 Players
+    [HttpGet("/api/leaderboard")]
+    public List<PlayerRank> GetTopPlayers(int topN = 10)
+    {
+      const string leaderboardKey = "leaderboard";
+      // Get top N players from the sorted set (with descending order)
+      var players = db.SortedSetRangeByRankWithScores(leaderboardKey, 0, topN - 1, Order.Descending);
+
+      var resultList = new List<PlayerRank>();
+      foreach (var player in players)
       {
-        return null;
+        var playerObj = new PlayerRank { Username = player.Element.ToString(), SkillScore = player.Score };
+        resultList.Add(playerObj);
       }
 
-      // Try to parse as int
-      if (int.TryParse(redisValue, out int intValue))
+      return resultList;
+    }
+
+    private async Task MonitorPlayerTurns(uint gameID, string currentPlayer)
+    {
+      var gameKey = $"game:{gameID}:game{gameID}";
+
+      // Start a 40-second countdown for current player's turn
+      var turnTimeout = TimeSpan.FromSeconds(40);
+      var startTime = DateTime.UtcNow;
+
+      while ((DateTime.UtcNow - startTime) < turnTimeout)
       {
-        return intValue;
+        // Check if the game is already over
+        var winner = db.HashGet(gameKey, "winner").ToString();
+        if (!string.IsNullOrEmpty(winner)) return;
+
+        // Check if the turn has changed
+        var currentTurn = db.HashGet(gameKey, "currentTurn").ToString();
+        if (currentTurn != currentPlayer) return;
+
+        await Task.Delay(1000); // Wait 1 second and check again
       }
 
-      // Try to parse as bool
-      if (bool.TryParse(redisValue, out bool boolValue))
+      var gameStatus = db.HashGet(gameKey, "winner").ToString();
+      if (string.IsNullOrEmpty(gameStatus))
       {
-        return boolValue;
-      }
+        Console.WriteLine($"Player {currentPlayer} failed to make a move in time. Declaring other player as the winner.");
 
-      // Try to parse as double
-      if (double.TryParse(redisValue, out double doubleValue))
-      {
-        return doubleValue;
+        var player1 = db.HashGet(gameKey, "player1").ToString();
+        var player2 = db.HashGet(gameKey, "player2").ToString();
+        var opponent = currentPlayer == player1 ? player2 : player1;
+
+        // Declare opponent as the winner
+        db.HashSet(gameKey, "winner", opponent);
+        Console.WriteLine($"OPPONENT WON:{opponent} p1{player1}. p2 {player1}, cur {currentPlayer}, gameID{gameID}");
+        HandleGameEnd(gameID, opponent, true, false, opponent);
       }
-      // If it's not any of the above, return as string
-      return redisValue.ToString();
     }
   }
 }

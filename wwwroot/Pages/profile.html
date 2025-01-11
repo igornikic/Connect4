@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect4 - Profile</title>
+  <link rel="stylesheet" href="../Styles/profile.css">
+  <link rel="stylesheet" href="../Styles/resMessage.css">
+  <script src="../config.js"></script>
+</head>
+<body>
+  <a id="menu">Menu</a>
+  <main>
+
+    <div class="profile-container">
+      <h1 id="username"></h1>
+      <div id="avatar_container">
+        <img id="avatar_img">
+      </div>
+      <div class="stats">
+        <div class="stat-row">
+          <div class="stat">
+            <span class="label">Skill Score:</span>
+            <span id="skill-score" class="value">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Win Rate:</span>
+            <span id="winrate" class="value">0%</span>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat">
+            <span class="label">Total Wins:</span>
+            <span id="total-wins" class="value">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Total Games:</span>
+            <span id="total-games" class="value">0</span>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat">
+            <span class="label">Loses:</span>
+            <span id="loses" class="value">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">Draws:</span>
+            <span id="total-draws" class="value">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <button id="delete_account">Delete Account</button>
+  <div id="responseMessage"></div>
+  <script type="module" src="../Scripts/profile.js"></script>
+</body>
+</html>

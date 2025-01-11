@@ -61,3 +61,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlc
 
 ### Get avatar
 GET http://localhost:5175/api/user/Assets/Avatars/avatar1.png
+
+### Get leaderboard
+GET http://localhost:5175/api/leaderboard

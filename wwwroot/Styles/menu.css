@@ -29,6 +29,11 @@ nav {
   flex-direction: row;
 }
 
+#nav_links div, 
+#nav_links a {
+  height: 75px;
+}
+
 #nav_links img {
   background-color: #fff;
   border-radius: 50%;
@@ -38,9 +43,12 @@ nav {
   color: #fff;
   font-weight: bold;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 
-#nav_links p {
+#nav_links p, 
+#nav_links span  {
   padding: 0 40px 0 10px;
 }
 
@@ -87,4 +95,52 @@ main #find_match:disabled {
   body {
     background: #141E30; 
   }
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Header for the dropdown - Avatar and Username */
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: black;
+  cursor: pointer;
+}
+
+/* Hide the dropdown content by default */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 200px;
+  z-index: 1;
+}
+
+.dropdown-content a {
+  color: black !important;
+  margin: 0 auto;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center; /* it got display inline-flex */
+  border: 1px solid black;
+}
+
+.dropdown-content button {
+  cursor: pointer;
+  height: 36px;
+    background-color: red;
+}
+
+/* Show dropdown when clicked */
+.dropdown:focus-within .dropdown-content {
+  display: flex;
+  flex-direction: column;
 }

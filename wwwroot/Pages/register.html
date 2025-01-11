@@ -25,6 +25,7 @@
           autocomplete="username" 
           required 
           aria-required="true"
+          tabindex="1"
         >
 
         <!-- Password -->
@@ -39,9 +40,10 @@
             placeholder="Enter your password" 
             required 
             aria-required="true"
+            tabindex="2"
           >
           <div id="toggle_password">
-            <input id="check1" class="check" type="checkbox">
+            <input id="check1" class="check" type="checkbox" tabindex="-1">
             <label for="check1" id="toggle">SHOW</label>
           </div>
         </div>
@@ -58,15 +60,16 @@
             placeholder="Enter your password" 
             required 
             aria-required="true"
+            tabindex="3"
           >
           <div id="toggle_password">
-            <input id="check2" class="check" type="checkbox">
+            <input id="check2" class="check" type="checkbox" tabindex="-1">
             <label for="check2" id="toggle2">SHOW</label>
           </div>
         </div>
 
         <!-- Register button -->
-        <button type="submit">Register</button>
+        <button type="submit" tabindex="4">Register</button>
         
         <!-- Link to login -->
         <p>

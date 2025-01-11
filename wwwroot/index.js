@@ -1,5 +1,12 @@
 const form = document.querySelector(".form-container");
 const responseMessage = document.getElementById("responseMessage");
+const token = localStorage.getItem("token");
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (token) {
+    localStorage.clear();
+  }
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();

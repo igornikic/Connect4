@@ -145,3 +145,60 @@ body {
     height: 11.3vw;
   }
 }
+
+
+/* CHAT STYLES */
+
+#chat-container {
+  max-width: 320px;
+  background-color: #fff;
+  margin-top: 10px;
+  color: #fff;
+  height: 160px;
+}
+
+#messages {
+  padding: 10px;
+  overflow-y: scroll;
+  max-height: 120px;
+  height: 120px;
+  border-bottom: 1px solid #ccc;
+  background-color: #000;
+}
+
+#messages div {
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(224, 224, 224, 0.1);
+}
+
+#chat-input {
+  display: flex;
+  border-top: 1px solid #ccc;
+}
+
+#message {
+  flex: 1;
+  border: none;
+  padding: 10px;
+  font-size: 16px;
+}
+
+#message:focus {
+  outline: none;
+}
+
+#send-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  height: 40px;
+}
+
+#send-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}

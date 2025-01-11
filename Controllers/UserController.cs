@@ -1,4 +1,5 @@
 using Connect4.Models;
+using Connect4.Utils;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -45,6 +46,7 @@ namespace Connect4.Controllers
       user.TotalGamesPlayed = 0;
       user.TotalWins = 0;
       user.TotalDraws = 0;
+      user.PurchasedAvatars = new List<uint> { 0 }; // First avatar is free
 
       try
       {
@@ -58,14 +60,17 @@ namespace Connect4.Controllers
           new HashEntry("Balance", user.Balance),
           new HashEntry("SkillScore", user.SkillScore),
           new HashEntry("TotalGamesPlayed", user.TotalGamesPlayed),
-          new HashEntry("TotalWins", user.TotalWins)
+          new HashEntry("TotalWins", user.TotalWins),
+          new HashEntry("TotalDraws", user.TotalDraws),
+          // Store PurchasedAvatars as a comma-separated string
+        new HashEntry("PurchasedAvatars", string.Join(",", user.PurchasedAvatars))
         });
 
         return Ok(token);
       }
       catch (SecurityTokenException ex)
       {
-        return StatusCode(500, $"Token generation error: {ex.Message}");
+        return Unauthorized($"Token generation error: {ex.Message}");
       }
       catch (Exception ex)
       {
@@ -113,7 +118,7 @@ namespace Connect4.Controllers
       }
       catch (SecurityTokenException ex)
       {
-        return StatusCode(500, $"Token generation error: {ex.Message}");
+        return Unauthorized($"Token generation error: {ex.Message}");
       }
       catch (Exception ex)
       {
@@ -121,28 +126,87 @@ namespace Connect4.Controllers
       }
     }
 
+    [HttpGet]
+    [Route("profile")]
+    public IActionResult GetProfilePage()
+    {
+      Console.WriteLine("called");
+      return File("~/profile.html", "text/html");
+    }
+
     [HttpGet("{username}")]
     [Authorize]
     [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
     [ProducesResponseType(404)]
     public async Task<ActionResult<User>> GetUser(string username)
     {
-      var userHash = await db.HashGetAllAsync($"user:{username}");
-      if (userHash.Length == 0)
+      string? authHeader = Request.Headers["Authorization"];
+      if (string.IsNullOrEmpty(authHeader))
       {
-        return NotFound($"User '{username}' not found.");
+        return BadRequest(new { Message = "Token is missing" });
       }
 
-      // User data without password
-      var user = userHash
-        .Where(u => u.Name != "Password")
-        .ToDictionary(
-            entry => entry.Name.ToString(),
-            entry => entry.Value.ToString()
-        );
+      // Extract token  and remove "Bearer " prefix
+      string token = authHeader.Substring("Bearer ".Length).Trim();
 
-      return Ok(user);
+      var handler = new JwtSecurityTokenHandler();
+      var jwtSecretKey = DotNetEnv.Env.GetString("JWT_SECRET_KEY");
+      var appUrl = DotNetEnv.Env.GetString("APP_URL");
+      var validationParameters = new TokenValidationParameters
+      {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = appUrl,
+        ValidAudience = appUrl,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey))
+      };
+
+      try
+      {
+        // Validate token
+        var principal = handler.ValidateToken(token, validationParameters, out _);
+        var usernameFromToken = principal.Identity?.Name;
+
+        if (string.IsNullOrEmpty(usernameFromToken))
+        {
+          return Unauthorized(new { Message = "Invalid token" });
+        }
+
+        // Fetch user details from Redis
+        var userHash = await db.HashGetAllAsync($"user:{username}");
+        if (userHash.Length == 0)
+        {
+          return NotFound(new { Message = $"User '{username}' not found." });
+        }
+
+        var user = userHash
+            .Where(u => u.Name != "Password")
+            .Where(u => u.Name != "PurchasedAvatars")
+            .ToDictionary(
+                x => x.Name.ToString(),
+                x => Helpers.GetValueWithType(x.Value)
+            );
+
+        var purchasedStr = userHash.FirstOrDefault(x => x.Name == "PurchasedAvatars").Value.ToString();
+        var purchasedArr = purchasedStr.Split(',').Select(int.Parse).ToArray();
+        user["PurchasedAvatars"] = purchasedArr;
+
+        return Ok(user);
+      }
+      catch (SecurityTokenException ex)
+      {
+        return Unauthorized($"Token generation error: {ex.Message}");
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, $"Internal server error: {ex.Message}");
+      }
     }
+
 
     private string GenerateJwtToken(string username)
     {
@@ -170,13 +234,65 @@ namespace Connect4.Controllers
       return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    [HttpDelete("delete-account")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult> DeleteAccount([FromHeader] string authorization)
+    {
+      // Ensure user is authenticated by checking JWT token
+      var token = authorization?.Replace("Bearer ", "");
+      if (string.IsNullOrEmpty(token))
+      {
+        return Unauthorized("You must be logged in to delete your account.");
+      }
+
+      try
+      {
+        var username = ValidateJwtToken(token);
+
+        // Ensure user exists
+        var userHash = await db.HashGetAllAsync($"user:{username}");
+        if (userHash.Length == 0)
+        {
+          return NotFound("User not found.");
+        }
+
+        // Delete user's data from Redis
+        await db.KeyDeleteAsync($"user:{username}");
+
+        return Ok(new { Message = "Account deleted successfully." });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, $"Internal server error: {ex.Message}");
+      }
+    }
+
+    private string ValidateJwtToken(string token)
+    {
+      // Validate JWT token and extract username from it
+      var handler = new JwtSecurityTokenHandler();
+      var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
+      if (jwtToken == null) throw new Exception("Invalid token.");
+      var username = jwtToken?.Claims?.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
+
+      if (string.IsNullOrEmpty(username))
+      {
+        throw new Exception("User not found in token.");
+      }
+
+      return username;
+    }
+
     [HttpGet("Assets/Avatars/{avatarName}")]
     public IActionResult GetAvatar(string avatarName)
     {
       // Get root project directory path
       var rootDirectory = Directory.GetCurrentDirectory();
 
-      // Construct file path for avatar image
+      // File path for avatar image
       var filePath = Path.Combine(rootDirectory, "Assets", "Avatars", avatarName);
 
       // Check if file exists
@@ -201,6 +317,140 @@ namespace Connect4.Controllers
 
       // Return file with it's MIME type
       return File(fileBytes, mimeType);
+    }
+
+    [HttpGet]
+    [Route("shop")]
+    public IActionResult GetShopPage()
+    {
+      return File("~/shop.html", "text/html");
+    }
+
+    [HttpGet("Assets/Avatars")]
+    public IActionResult GetAllAvatars()
+    {
+      // Get root project directory path
+      var rootDirectory = Directory.GetCurrentDirectory();
+      var avatarsDirectory = Path.Combine(rootDirectory, "Assets", "Avatars");
+
+      // Check if directory exists
+      if (!Directory.Exists(avatarsDirectory))
+      {
+        return NotFound(new { Message = "Avatars directory not found." });
+      }
+
+      // Get all avatar files in the directory
+      var avatarFiles = Directory.GetFiles(avatarsDirectory)
+          .Select((filePath, index) =>
+          {
+            var fileName = Path.GetFileName(filePath);
+            var price = 200 + (index * 200); // Increment price by 200 for each avatar
+
+            return new
+            {
+              ID = index,
+              Url = $"/Assets/Avatars/{fileName}",
+              Price = price
+            };
+          })
+          .ToList();
+
+      // Return list of avatars
+      return Ok(avatarFiles);
+    }
+
+    // FIX THIS XDDD
+    [HttpPost("{username}/{avatarId}")]
+    public async Task<IActionResult> PurchaseAvatar(string username, uint avatarId)
+    {
+      // Check if the user exists
+      var userKey = $"user:{username}";
+      var userHash = await db.HashGetAllAsync(userKey);
+      if (userHash.Length == 0)
+      {
+        return NotFound($"User '{username}' not found.");
+      }
+
+      // Extract user's balance
+      var balanceEntry = userHash.FirstOrDefault(x => x.Name == "Balance");
+      var balance = balanceEntry.Value.IsNullOrEmpty ? 0 : (uint)balanceEntry.Value;
+
+      // Extract purchased avatars
+      var purchasedAvatarsStr = userHash.FirstOrDefault(x => x.Name == "PurchasedAvatars").Value.ToString();
+      var purchasedAvatars = string.IsNullOrWhiteSpace(purchasedAvatarsStr)
+          ? new HashSet<uint>()
+          : new HashSet<uint>(purchasedAvatarsStr.Split(',').Select(uint.Parse));
+
+      if (purchasedAvatars.Contains(avatarId))
+      {
+        return BadRequest(new { Message = "Avatar already purchased." });
+      }
+
+      var avatarPrice = 200 + (avatarId * 200);
+
+      // Check if user has enough balance
+      if (balance < avatarPrice)
+      {
+        return BadRequest(new { Message = "Insufficient balance." });
+      }
+
+      balance -= avatarPrice;
+      purchasedAvatars.Add(avatarId);
+
+      await db.HashSetAsync(userKey, new[]
+      {
+        new HashEntry("Balance", balance),
+        new HashEntry("PurchasedAvatars", string.Join(",", purchasedAvatars))
+    });
+
+      return Ok(new { Message = "Avatar purchased successfully.", NewBalance = balance });
+    }
+
+
+    // WORKS
+    [HttpPost("{username}/change-avatar/{avatarId}")]
+    public async Task<IActionResult> ChangeAvatar(string username, uint avatarId)
+    {
+      // Check if the user exists
+      var userHash = await db.HashGetAllAsync($"user:{username}");
+      if (userHash.Length == 0)
+      {
+        return NotFound($"User '{username}' not found.");
+      }
+
+      var purchasedAvatarsStr = userHash.FirstOrDefault(x => x.Name == "PurchasedAvatars").Value.ToString();
+      var purchasedAvatars = purchasedAvatarsStr.Split(',').Select(uint.Parse).ToList();
+
+      if (!purchasedAvatars.Contains(avatarId))
+      {
+        return BadRequest(new { Message = "Avatar not owned by the user." });
+      }
+      try
+      {
+        // Update AvatarPath in Redis
+        await db.HashSetAsync($"user:{username}", "AvatarPath", $"Assets/Avatars/avatar{avatarId}.png");
+        return Ok(new { Message = "Avatar changed successfully." });
+      }
+      catch (Exception ex)
+      {
+        return StatusCode(500, $"Internal server error: {ex.Message}");
+      }
+
+    }
+    [HttpGet("{username}/purchased-avatars")]
+    public async Task<IActionResult> GetPurchasedAvatars(string username)
+    {
+      var userHash = await db.HashGetAllAsync($"user:{username}");
+      if (userHash.Length == 0)
+      {
+        return NotFound($"User '{username}' not found.");
+      }
+
+      // Get purchased avatars
+      var purchasedAvatarsStr = userHash.FirstOrDefault(x => x.Name == "PurchasedAvatars").Value.ToString();
+      var purchasedAvatars = purchasedAvatarsStr.Split(',').Select(uint.Parse).ToList();
+
+      return Ok(purchasedAvatars);
     }
   }
 }

@@ -3,6 +3,15 @@ const userString = localStorage.getItem("user");
 const user = JSON.parse(userString);
 let gameState;
 let yourDiskColor = "black";
+let timer = null;
+let timeLeft = 40; // Time per turn
+
+// Chat
+const messagesContainer = document.getElementById("messages");
+const messageInput = document.getElementById("message");
+const sendBtn = document.getElementById("send-btn");
+const chatInputForm = document.getElementById("chat-input");
+
 document.addEventListener("DOMContentLoaded", async () => {
   const board = document.getElementById("board");
 
@@ -35,17 +44,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     cell.addEventListener("mouseout", () => {
       // Find circle inside cell and remove it
-      // if (!cell.querySelector(".animation")) {
       const circle = cell.querySelector(".circle");
       if (circle) {
         circle.remove();
       }
-      // }
     });
 
     cell.addEventListener("click", () => {
       // Send played move to server
       if (gameState && gameState.currentTurn !== user.Username) return;
+      // Invalid move, whole column is filled
+      if (cell.querySelector(".played-circle")) return;
       sendMove(cell.id);
     });
   });
@@ -53,7 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Fetch player data
   const gameID = window.location.pathname.split("/").pop();
 
-  //SOCKET
+  // GAME SOCKET
   const socket = new WebSocket(`${API_URL}/ws/game/${gameID}?token=${token}`);
 
   socket.onopen = () => {
@@ -65,6 +74,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   socket.onmessage = (event) => {
     messageData = JSON.parse(event.data);
+    console.log(messageData);
+
+    if (messageData.currentTurn === user.Username) {
+      console.log("YES");
+      startTimer();
+    } else {
+      stopTimer(); // Stop timer if it's not your turn
+    }
 
     if (messageData.board) {
       // Board related data
@@ -80,22 +97,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   socket.onclose = () => {
     console.log("WebSocket connection closed");
+    stopTimer();
   };
 
   socket.onerror = (error) => {
     console.error("WebSocket error:", error);
+    stopTimer();
   };
 
   function sendMove(index) {
     socket.send(index);
+    stopTimer();
   }
 
   function updateGameState(messageData) {
     messageData.board.forEach((cell, i) => {
       const cellDiv = document.getElementById(`${i}`);
 
-      // Check if cellDiv has no children before appending circle
-      if (cellDiv && cellDiv.children.length === 0) {
+      // Check if cellDiv is free before appending circle
+      if (cellDiv && !cellDiv.querySelector(".played-circle")) {
         if (cell === 1 || cell === 2) {
           const circle = document.createElement("div");
           circle.classList.add("played-circle");
@@ -131,6 +151,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (messageData.winner != null) {
       ResultPopup(messageData.winner);
+      stopTimer();
     }
   }
 
@@ -166,6 +187,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     accountUpdates.appendChild(balanceP);
     accountUpdates.appendChild(skillScoreP);
 
+    // If user won on time it would be sent via user update data at WonOnTime
+    if (messageData.WonOnTime) {
+      ResultPopup(messageData.WonOnTime);
+    }
+
     // Add event listener for close button, only after the popup is shown
     document
       .getElementById("closePopupButton")
@@ -194,5 +220,93 @@ document.addEventListener("DOMContentLoaded", async () => {
       player1P.style.color = "#fff";
       player2P.style.color = "#1bb933";
     }
+  }
+
+  // TIMER
+  const timerValueElement = document.getElementById("timer-value");
+
+  // Function to start or reset the timer
+  function startTimer() {
+    clearInterval(timer); // Clear any existing timer
+    timeLeft = 40; // Reset time
+
+    timer = setInterval(() => {
+      timeLeft -= 1;
+      timerValueElement.textContent = timeLeft;
+
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+      }
+    }, 1000);
+  }
+
+  // Function to stop the timer
+  function stopTimer() {
+    clearInterval(timer);
+  }
+
+  // CHAT WEBSOCKET
+  const chatSocket = new WebSocket(
+    `${API_URL}/ws/chat/${gameID}?token=${token}`
+  );
+
+  chatSocket.onopen = () => {
+    console.log("Connected to chat server.");
+  };
+
+  chatSocket.onmessage = (event) => {
+    const message = event.data;
+    displayMessage(message);
+  };
+
+  chatSocket.onclose = () => {
+    console.log("Disconnected from the chat server.");
+  };
+
+  chatSocket.onerror = (error) => {
+    console.error("Chat WebSocket error:", error);
+  };
+
+  // Enable send button only when there's a message
+  messageInput.addEventListener("input", () => {
+    sendBtn.disabled = !messageInput.value.trim();
+  });
+
+  // Send message
+  chatInputForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const message = messageInput.value.trim();
+    if (message && chatSocket.readyState === WebSocket.OPEN) {
+      chatSocket.send(message);
+      messageInput.value = "";
+      sendBtn.disabled = true;
+    }
+  });
+
+  // Display message in chat
+  function displayMessage(message) {
+    // Split the received message into username and message content (message is received in format {username}: {message})
+    const messageDiv = document.createElement("div");
+    const usernameSpan = document.createElement("span");
+    const messageSpan = document.createElement("span");
+    const [username, ...messageTxt] = message.split(": ");
+
+    // Username matches disk color
+    if (username === user.Username && yourDiskColor === "red") {
+      usernameSpan.style.color = "red";
+    } else if (username === user.Username && yourDiskColor === "yellow") {
+      usernameSpan.style.color = "yellow";
+    } else if (username !== user.Username && yourDiskColor === "yellow") {
+      usernameSpan.style.color = "red";
+    } else {
+      usernameSpan.style.color = "yellow";
+    }
+
+    usernameSpan.textContent = `${username}: `;
+    messageSpan.textContent = messageTxt;
+    messageDiv.appendChild(usernameSpan);
+    messageDiv.appendChild(messageSpan);
+    messagesContainer.appendChild(messageDiv);
   }
 });

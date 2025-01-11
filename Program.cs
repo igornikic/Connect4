@@ -75,4 +75,26 @@ app.MapGet("/register", async (HttpContext context) =>
   await context.Response.SendFileAsync(filePath);
 });
 
+// Serve leaderboard.html for /leaderboard
+app.MapGet("/leaderboard", async (HttpContext context) =>
+{
+  var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Pages", "leaderboard.html");
+  context.Response.ContentType = "text/html";
+  await context.Response.SendFileAsync(filePath);
+});
+
+app.MapGet("/profile", async (HttpContext context) =>
+{
+  var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Pages", "profile.html");
+  context.Response.ContentType = "text/html";
+  await context.Response.SendFileAsync(filePath);
+});
+
+app.MapGet("/shop", async (HttpContext context) =>
+{
+  var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Pages", "shop.html");
+  context.Response.ContentType = "text/html";
+  await context.Response.SendFileAsync(filePath);
+});
+
 app.Run();

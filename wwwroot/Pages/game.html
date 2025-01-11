@@ -10,6 +10,9 @@
 <body>
   <div class="players">
     <p id="player1"></p>
+    <div id="timer">
+    Time left: <span id="timer-value">40</span>s
+  </div>
     <p id="player2"></p>
   </div>
   <div id="board"></div>
@@ -24,6 +27,14 @@
     </div>
   </div>
 
+  <!-- Chat -->
+  <div id="chat-container">
+    <div id="messages"></div>
+    <form id="chat-input">
+      <input type="text" id="message" placeholder="Type your message..." autocomplete="off" />
+      <button type="submit" id="send-btn" disabled>Send</button>
+    </form>
+  </div>
   <script src="../Scripts/game.js"></script>
 </body>
 </html>
